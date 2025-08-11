@@ -3,16 +3,10 @@ import SearchBar from "@/components/SearchBar";
 import { icons } from "@/constants/icons";
 import { images } from "@/constants/images";
 import { fetchMovies } from "@/services/api";
+import { updateSearchCount } from "@/services/appwrite";
 import useFetch from "@/services/useFetch";
-import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, Image, Text, View } from "react-native";
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -21,7 +15,27 @@ const Search = () => {
     data: movies,
     loading,
     error,
+    refetch: loadMovies,
+    reset,
   } = useFetch(() => fetchMovies({ query: searchQuery }), true);
+
+  useEffect(() => {
+    const timoutId = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        await loadMovies();
+      } else {
+        reset();
+      }
+    }, 500);
+
+    return () => clearTimeout(timoutId);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (movies?.length > 0 && movies?.[0]) {
+      updateSearchCount(searchQuery, movies?.[0]);
+    }
+  }, [movies]);
 
   return (
     <View className="flex-1 bg-primary">
@@ -81,11 +95,18 @@ const Search = () => {
               )}
           </>
         }
+        ListEmptyComponent={
+          !loading && !error ? (
+            <View className="mt-10 px-5">
+              <Text className="text-center text-gray-500 ">
+                {searchQuery.trim() ? "No movies found" : "Search for a movie"}
+              </Text>
+            </View>
+          ) : null
+        }
       />
     </View>
   );
 };
 
 export default Search;
-
-const styles = StyleSheet.create({});
